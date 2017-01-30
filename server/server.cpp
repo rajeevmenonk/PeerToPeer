@@ -5,11 +5,67 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <map>
 
 #define SERVER_PORT 12345
 #define MAX_CLIENTS 10
 
 using namespace std;
+
+map < int, string > clientSocks;
+pthread_mutex_t  mutex; 
+
+void *threadFun (void *args)
+{
+    int clientSock = *(int *)args;
+    char name[100];
+    read(clientSock, name , 100);
+    clientSocks[clientSock] = string(name);
+    
+    pthread_mutex_lock(&mutex);
+    pthread_mutex_unlock(&mutex);
+    int clientId;
+    char clientName[100];
+    int mapSize = clientSocks.size();
+    cout << "Map size is " << mapSize << endl;
+    mapSize = htonl(mapSize);
+    write(clientSock, &mapSize, sizeof(int));
+
+    // Send client information to the child.
+    char serverName[100];
+    for ( map<int, string>::iterator iter = clientSocks.begin();
+          iter != clientSocks.end();
+          ++iter)
+    {
+        clientId = iter->first;
+        if (1 || clientId != clientSock)
+        {
+            clientId = htonl(clientId);
+            write(clientSock, &clientId, sizeof(int));
+            strcpy(serverName, (iter->second).c_str());
+            write(clientSock, serverName, strlen(serverName));
+        }
+    }
+
+    char message[100];
+    int size;
+    int netOrderClientSock = htonl(clientSock);
+
+    while(1)
+    {
+        size = 0;
+        bzero(message, 100);
+
+        read(clientSock, &clientId, sizeof(int));
+        clientId = htonl(clientId);
+        size = read(clientSock, &message, 100-size);
+        
+        write(clientId, &netOrderClientSock, sizeof(int));
+        write(clientId, message, size+1);
+    }
+    free(&clientSock);
+}
+
 int main()
 {
     int sockDesc;
@@ -35,24 +91,22 @@ int main()
     }
     listen(sockDesc, MAX_CLIENTS);
 
-    vector <int> clientSocks;
-    int clientSock;
     struct sockaddr_in clientAddr;
-    char buffer[100];
     socklen_t sizeOfSockAddr = sizeof(sockaddr_in);
     int size;
+    pthread_t threadId;
+    pthread_mutex_init(&mutex, NULL);
+
     while(1)
     {
-        size = 0;
-        clientSock = accept(sockDesc, (struct sockaddr *)&clientAddr, 
+        int *clientSock = new int;
+        *clientSock = accept(sockDesc, (struct sockaddr *)&clientAddr, 
                    &sizeOfSockAddr);
-        cout << "Client accepted\n";
         if (clientSock < 0)
         {
             cout << "Error on accepting a connection from client\n";
             continue;
         }
-        size = read(clientSock, buffer + size, 100);
-        printf("%s\n", buffer);
+        pthread_create(&threadId, NULL, threadFun, (void *)clientSock);
     }
 }
