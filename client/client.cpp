@@ -92,10 +92,9 @@ int main(int argc, char *argv[])
 {
    if (argc != 3)
    {
-       cout << "This program needs two arguments\n";
+       cout << "This program needs one argument\n";
        cout << "1. The server IP\n";
-       cout << "2. The client Name\n";
-       cout << "Eg: ./client 127.0.0.1 client1\n";
+       cout << "Eg: ./client 127.0.0.1 \n";
        exit(0);
    }
 
@@ -129,7 +128,8 @@ int main(int argc, char *argv[])
        exit(0);
    }
 
-   write(sockDesc, argv[2], strlen(argv[2])+1);
+   char name[100] = "testName";
+   write(sockDesc, name, strlen(name)+1);
    
    /*
    int servers;
