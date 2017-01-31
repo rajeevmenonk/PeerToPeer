@@ -14,7 +14,6 @@
 using namespace std;
 
 map < int, string > clientSocks;
-pthread_mutex_t  mutex; 
 
 void sendAllClients(int clientSock)
 {
@@ -44,8 +43,6 @@ void *threadFun (void *args)
     read(clientSock, name , 100);
     clientSocks[clientSock] = string(name);
     
-    pthread_mutex_lock(&mutex);
-    pthread_mutex_unlock(&mutex);
     int clientId;
 
     sendAllClients(clientSock);
@@ -108,7 +105,6 @@ int main()
     struct sockaddr_in clientAddr;
     socklen_t sizeOfSockAddr = sizeof(sockaddr_in);
     pthread_t threadId;
-    pthread_mutex_init(&mutex, NULL);
 
     while(1)
     {
