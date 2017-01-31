@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <map>
+#include <cstdlib>
 
 #define SERVER_PORT 12344
 #define MAX_CLIENTS 10
@@ -18,7 +19,7 @@ pthread_mutex_t  mutex;
 void sendAllClients(int clientSock)
 {
     // Send client information to the child.
-    char serverName[100];
+    //char serverName[100];
     int clientId;
     int mapSize = clientSocks.size();
     mapSize = htonl(mapSize);
@@ -46,7 +47,6 @@ void *threadFun (void *args)
     pthread_mutex_lock(&mutex);
     pthread_mutex_unlock(&mutex);
     int clientId;
-    char clientName[100];
 
     sendAllClients(clientSock);
 
@@ -107,7 +107,6 @@ int main()
 
     struct sockaddr_in clientAddr;
     socklen_t sizeOfSockAddr = sizeof(sockaddr_in);
-    int size;
     pthread_t threadId;
     pthread_mutex_init(&mutex, NULL);
 

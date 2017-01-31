@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 
@@ -15,8 +17,8 @@ void printConnectedServers (int sockDesc)
    int clientId;
    read(sockDesc, &servers, sizeof(int));
    servers = htonl(servers);
-   int size = 0;
-   char buffer[100];
+   //int size = 0;
+   //char buffer[100];
    cout << "Number of available clients: " << servers << endl;
    while(servers != 0)
    {
@@ -32,7 +34,7 @@ void printConnectedServers (int sockDesc)
         //while(buffer[size-1] != '\0');
 
         //printf("Client Id: %d Client Name:%s\n", clientId, buffer);
-        printf("Client Id: %d\n", clientId);
+        cout << "Client Id: " << clientId << endl;
         servers--;
    }
 }
@@ -41,11 +43,10 @@ void *readFun (void *args)
 {
     int sockDesc = *(int *)args;
     char buffer[100];
-    int ret;
     int senderId;
     while(1)
     {
-        ret = read(sockDesc, &senderId, sizeof(int));
+        read(sockDesc, &senderId, sizeof(int));
         senderId = ntohl(senderId);
         if (senderId == -1)
         {
@@ -53,10 +54,10 @@ void *readFun (void *args)
         }
         else
         {
-            ret = read(sockDesc, buffer, 100);
+            read(sockDesc, buffer, 100);
 
-            printf("##################### Message from sender:%d \n", senderId);
-            printf("##################### Message:%s \n", buffer);
+            cout << "##################### Message from sender: " << senderId << endl;
+            printf(" ##################### Message: %s\n", buffer);
         }
     }
 }
@@ -128,8 +129,7 @@ int main(int argc, char *argv[])
        exit(0);
    }
 
-   int ret;
-   ret = write(sockDesc, argv[2], strlen(argv[2])+1);
+   write(sockDesc, argv[2], strlen(argv[2])+1);
    
    /*
    int servers;
