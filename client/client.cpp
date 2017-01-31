@@ -11,34 +11,27 @@
 
 using namespace std;
 
+// This function is invoked when the server is sending all the connected
+// clients. When the server is sending the connected clients, it would first
+// send the number of connected clients.
 void printConnectedServers (int sockDesc)
 {
    int servers;
    int clientId;
    read(sockDesc, &servers, sizeof(int));
    servers = htonl(servers);
-   //int size = 0;
-   //char buffer[100];
    cout << "Number of available clients: " << servers << endl;
    while(servers != 0)
    {
         read(sockDesc, &clientId, sizeof(int));
         clientId = htonl(clientId);
-        //bzero(buffer, 100);
-        //size = 0;
-        //do
-        //{
-        //   read(sockDesc, buffer+size, 100-size);
-        //   printf("current val %s\n", buffer);
-        //}
-        //while(buffer[size-1] != '\0');
-
-        //printf("Client Id: %d Client Name:%s\n", clientId, buffer);
         cout << "Client Id: " << clientId << endl;
         servers--;
    }
 }
 
+// This function is used by the read thread. This function prints all the data
+// that is being send by the server.
 void *readFun (void *args)
 {
     int sockDesc = *(int *)args;
@@ -48,6 +41,9 @@ void *readFun (void *args)
     {
         read(sockDesc, &senderId, sizeof(int));
         senderId = ntohl(senderId);
+
+        // If the sender Id is -1, it means that the server is sending all the 
+        // connected clients.
         if (senderId == -1)
         {
             printConnectedServers(sockDesc);
@@ -56,12 +52,15 @@ void *readFun (void *args)
         {
             read(sockDesc, buffer, 100);
 
-            cout << "##################### Message from sender: " << senderId << endl;
+            cout << "##################### Message from sender: " << 
+                    senderId << endl;
             printf(" ##################### Message: %s\n", buffer);
         }
     }
 }
 
+// This function is used by the write thread. This function sends the data to 
+// the server.
 void *writeFun(void *args)
 {
     int sockDesc = *(int *)args;
@@ -69,7 +68,8 @@ void *writeFun(void *args)
     char buffer[100];
     while(1)
     {
-        cout << "Enter Client to initiate chat(Enter -1 to get all connected clients):\n";
+        cout << "Enter Client to initiate chat";
+        cout <<"(Enter -1 to get all connected clients):\n";
         cin >> clientId;
 
         if (clientId != -1)
@@ -90,7 +90,7 @@ void *writeFun(void *args)
 
 int main(int argc, char *argv[])
 {
-   if (argc != 3)
+   if (argc != 2)
    {
        cout << "This program needs one argument\n";
        cout << "1. The server IP\n";
@@ -119,10 +119,14 @@ int main(int argc, char *argv[])
    }
 
    serverAddr.sin_family = AF_INET;
-   bcopy((char *)server->h_addr, (char *)&serverAddr.sin_addr.s_addr, server->h_length);
+   bcopy((char *)server->h_addr, 
+         (char *)&serverAddr.sin_addr.s_addr, 
+         server->h_length);
    serverAddr.sin_port = htons(12344);
 
-   if (connect(sockDesc, (struct sockaddr *)&serverAddr,sizeof(serverAddr)) < 0) 
+   if (connect(sockDesc, 
+               (struct sockaddr *)&serverAddr,
+               sizeof(serverAddr)) < 0) 
    {
        cout << "Unable to connect to socket\n";
        exit(0);
@@ -131,27 +135,6 @@ int main(int argc, char *argv[])
    char name[100] = "testName";
    write(sockDesc, name, strlen(name)+1);
    
-   /*
-   int servers;
-   int clientId;
-   ret = read(sockDesc, &servers, sizeof(int));
-   servers = htonl(servers);
-   int size = 0;
-   char buffer[100];
-   while(servers != 0)
-   {
-        read(sockDesc, &clientId, sizeof(int));
-        clientId = htonl(clientId);
-        bzero(buffer, 100);
-        size = 0;
-        do
-           read(sockDesc, buffer+size, 100-size);
-        while(buffer[size-1] != '\0');
-
-        printf("Client Id: %d Client Name:%s\n", clientId, buffer);
-        servers--;
-   }
-   */
    printConnectedServers(sockDesc);
 
    pthread_t readId, writeId;
@@ -160,6 +143,4 @@ int main(int argc, char *argv[])
 
    pthread_join(readId, NULL);
    pthread_join(writeId, NULL);
-
-   //close(sockDesc);
 }

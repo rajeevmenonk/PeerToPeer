@@ -15,6 +15,8 @@ using namespace std;
 
 map < int, string > clientSocks;
 
+// The following function sends all the connected clients to the 
+// client that request the information
 void sendAllClients(int clientSock)
 {
     // Send client information to the child.
@@ -29,14 +31,11 @@ void sendAllClients(int clientSock)
     {
         clientId = htonl(iter->first);
         write(clientSock, &clientId, sizeof(int));
-        //bzero(serverName, 100);
-        //strcpy(serverName, (iter->second).c_str());
-        //write(clientSock, serverName, strlen(serverName)+1);
-        //printf("Client %d with name %s send to %d\n", ntohl(clientId), serverName, clientSock);
     }
 }
 
-void *threadFun (void *args)
+// This function is called to handle each client individually
+void *handleClient (void *args)
 {
     int clientSock = *(int *)args;
     char name[100];
@@ -95,7 +94,9 @@ int main()
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
 
-    if (bind(sockDesc, (struct sockaddr *) &serverAddr, sizeof(sockaddr_in)) < 0)
+    if (bind(sockDesc, 
+             (struct sockaddr *) &serverAddr, 
+             sizeof(sockaddr_in)) < 0)
     {
         cout << "Error Binding Socket\n";
         exit(0);
@@ -116,6 +117,6 @@ int main()
             cout << "Error on accepting a connection from client\n";
             continue;
         }
-        pthread_create(&threadId, NULL, threadFun, (void *)clientSock);
+        pthread_create(&threadId, NULL, handleClient, (void *)clientSock);
     }
 }
