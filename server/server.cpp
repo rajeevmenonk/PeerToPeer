@@ -7,13 +7,34 @@
 #include <pthread.h>
 #include <map>
 
-#define SERVER_PORT 12345
+#define SERVER_PORT 12344
 #define MAX_CLIENTS 10
 
 using namespace std;
 
 map < int, string > clientSocks;
 pthread_mutex_t  mutex; 
+
+void sendAllClients(int clientSock)
+{
+    // Send client information to the child.
+    char serverName[100];
+    int clientId;
+    int mapSize = clientSocks.size();
+    mapSize = htonl(mapSize);
+    write(clientSock, &mapSize, sizeof(int));
+    for ( map<int, string>::iterator iter = clientSocks.begin();
+          iter != clientSocks.end();
+          ++iter)
+    {
+        clientId = htonl(iter->first);
+        write(clientSock, &clientId, sizeof(int));
+        //bzero(serverName, 100);
+        //strcpy(serverName, (iter->second).c_str());
+        //write(clientSock, serverName, strlen(serverName)+1);
+        //printf("Client %d with name %s send to %d\n", ntohl(clientId), serverName, clientSock);
+    }
+}
 
 void *threadFun (void *args)
 {
@@ -26,26 +47,8 @@ void *threadFun (void *args)
     pthread_mutex_unlock(&mutex);
     int clientId;
     char clientName[100];
-    int mapSize = clientSocks.size();
-    cout << "Map size is " << mapSize << endl;
-    mapSize = htonl(mapSize);
-    write(clientSock, &mapSize, sizeof(int));
 
-    // Send client information to the child.
-    char serverName[100];
-    for ( map<int, string>::iterator iter = clientSocks.begin();
-          iter != clientSocks.end();
-          ++iter)
-    {
-        clientId = iter->first;
-        if (1 || clientId != clientSock)
-        {
-            clientId = htonl(clientId);
-            write(clientSock, &clientId, sizeof(int));
-            strcpy(serverName, (iter->second).c_str());
-            write(clientSock, serverName, strlen(serverName));
-        }
-    }
+    sendAllClients(clientSock);
 
     char message[100];
     int size;
@@ -53,16 +56,27 @@ void *threadFun (void *args)
 
     while(1)
     {
-        size = 0;
         bzero(message, 100);
+        clientId = 0;
 
         read(clientSock, &clientId, sizeof(int));
-        clientId = htonl(clientId);
-        size = read(clientSock, &message, 100-size);
-        
-        write(clientId, &netOrderClientSock, sizeof(int));
-        write(clientId, message, size+1);
+        clientId = ntohl(clientId);
+
+        if(clientId == -1)
+        {
+            clientId = htonl(clientId);
+            write(clientSock, &clientId, sizeof(int));
+            sendAllClients(clientSock);
+        }
+        else if (clientSocks.find(clientId) != clientSocks.end())
+        {
+            size = read(clientSock, &message, 100);
+            
+            write(clientId, &netOrderClientSock, sizeof(int));
+            write(clientId, message, size+1);
+        }
     }
+    cout << "end " << clientSock << endl;
     free(&clientSock);
 }
 

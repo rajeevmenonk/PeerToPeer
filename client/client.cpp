@@ -9,6 +9,34 @@
 
 using namespace std;
 
+void printConnectedServers (int sockDesc)
+{
+   int servers;
+   int clientId;
+   read(sockDesc, &servers, sizeof(int));
+   servers = htonl(servers);
+   int size = 0;
+   char buffer[100];
+   cout << "Number of available clients: " << servers << endl;
+   while(servers != 0)
+   {
+        read(sockDesc, &clientId, sizeof(int));
+        clientId = htonl(clientId);
+        //bzero(buffer, 100);
+        //size = 0;
+        //do
+        //{
+        //   read(sockDesc, buffer+size, 100-size);
+        //   printf("current val %s\n", buffer);
+        //}
+        //while(buffer[size-1] != '\0');
+
+        //printf("Client Id: %d Client Name:%s\n", clientId, buffer);
+        printf("Client Id: %d\n", clientId);
+        servers--;
+   }
+}
+
 void *readFun (void *args)
 {
     int sockDesc = *(int *)args;
@@ -17,10 +45,19 @@ void *readFun (void *args)
     int senderId;
     while(1)
     {
-        read(sockDesc, &senderId, sizeof(int));
-        senderId = htonl(senderId);
-        read(sockDesc, buffer, 100);
-        printf("##################### Message from sender:%d %s\n", senderId, buffer);
+        ret = read(sockDesc, &senderId, sizeof(int));
+        senderId = ntohl(senderId);
+        if (senderId == -1)
+        {
+            printConnectedServers(sockDesc);
+        }
+        else
+        {
+            ret = read(sockDesc, buffer, 100);
+
+            printf("##################### Message from sender:%d \n", senderId);
+            printf("##################### Message:%s \n", buffer);
+        }
     }
 }
 
@@ -31,13 +68,22 @@ void *writeFun(void *args)
     char buffer[100];
     while(1)
     {
-        cout << "Enter Client to initiate chat:\n";
+        cout << "Enter Client to initiate chat(Enter -1 to get all connected clients):\n";
         cin >> clientId;
-        clientId = htonl(clientId);
-        cout << "Enter Message:\n";
-        cin >> buffer;
-        write(sockDesc, &clientId, sizeof(int));
-        write(sockDesc, buffer, strlen(buffer)+1);
+
+        if (clientId != -1)
+        {
+            clientId = htonl(clientId);
+            write(sockDesc, &clientId, sizeof(int));
+            cout << "Enter Message:\n";
+            cin >> buffer;
+            write(sockDesc, buffer, strlen(buffer)+1);
+        }
+        else
+        {
+            clientId = htonl(clientId);
+            write(sockDesc, &clientId, sizeof(int));
+        }
     }
 }
 
@@ -74,7 +120,7 @@ int main(int argc, char *argv[])
 
    serverAddr.sin_family = AF_INET;
    bcopy((char *)server->h_addr, (char *)&serverAddr.sin_addr.s_addr, server->h_length);
-   serverAddr.sin_port = htons(12345);
+   serverAddr.sin_port = htons(12344);
 
    if (connect(sockDesc, (struct sockaddr *)&serverAddr,sizeof(serverAddr)) < 0) 
    {
@@ -82,32 +128,31 @@ int main(int argc, char *argv[])
        exit(0);
    }
 
-   char name[100] = "Client1";
    int ret;
    ret = write(sockDesc, argv[2], strlen(argv[2])+1);
    
+   /*
    int servers;
    int clientId;
-   char buffer[100];
    ret = read(sockDesc, &servers, sizeof(int));
-
    servers = htonl(servers);
-   if (servers == 0)
-   {
-       cout << "No otherr client";
-   }
-
    int size = 0;
+   char buffer[100];
    while(servers != 0)
    {
-        bzero(buffer, 100);
         read(sockDesc, &clientId, sizeof(int));
         clientId = htonl(clientId);
-        
-        read(sockDesc, buffer, 100);
-        printf("Client Id: %d, Client Name: %s\n", clientId, buffer);
+        bzero(buffer, 100);
+        size = 0;
+        do
+           read(sockDesc, buffer+size, 100-size);
+        while(buffer[size-1] != '\0');
+
+        printf("Client Id: %d Client Name:%s\n", clientId, buffer);
         servers--;
    }
+   */
+   printConnectedServers(sockDesc);
 
    pthread_t readId, writeId;
    pthread_create(&readId, NULL, readFun, (void *)&sockDesc);
